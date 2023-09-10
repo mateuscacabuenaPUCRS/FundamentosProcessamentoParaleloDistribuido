@@ -13,6 +13,7 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"time"
 )
 
 const (
@@ -34,6 +35,7 @@ func cliente(i int, req chan Request) {
 		req <- Request{v, my_ch}
 		r = <-my_ch
 		fmt.Println("cli: ", i, " req: ", v, "  resp:", r)
+		//time.Sleep(300 * time.Second)
 	}
 }
 
