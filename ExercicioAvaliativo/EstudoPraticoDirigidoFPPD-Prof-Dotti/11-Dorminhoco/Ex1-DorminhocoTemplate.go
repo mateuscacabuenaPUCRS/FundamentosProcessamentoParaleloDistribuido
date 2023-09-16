@@ -45,16 +45,28 @@ func jogador(id int, in chan carta, out chan carta, cartasIniciais []carta, ... 
 }
 
 func main() {
+	rand.Seed(time.Now().UnixNano()) // Inicialize a semente para a geração de números aleatórios
+
+	cartasEscolhidas := []carta{"A", "B", "C", "D"} // cartas iniciais de cada jogador
 	for i := 0; i < NJ; i++ {
 		ch[i] = make(chan struct{})
 	}
 	// cria um baralho com NJ*M cartas
 	for i := 0; i < NJ; i++ {
-		// escolhe aleatoriamente (tira) cartas do baralho, passa cartas para jogador
+		
 		go jogador(i, ch[i], ch[(i+1)%N], cartasEscolhidas , ...) // cria processos conectados circularmente
 	}
+
+	for i := 0; i < NJ; i++ {
+		// escolhe aleatoriamente (tira) cartas do baralho, passa cartas para jogador
+        cartasEscolhidas := make([]carta, 4)
+        for j := 0; j < 4; j++ {
+            indiceAleatorio := rand.Intn(4) // Gera aleatoriamente um índice entre 0 e 3
+            cartasEscolhidas[j] = carta('A' + indiceAleatorio)
+        }
+
+        go jogador(i, ch[i], ch[(i+1)%NJ], cartasEscolhidas)
+    }
 	
 	<-make(chan struct{}) // bloqueia
 }
-
-
