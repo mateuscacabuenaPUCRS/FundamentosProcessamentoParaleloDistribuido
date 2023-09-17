@@ -110,7 +110,7 @@ func buscaConcCh(r *Nodo, v int, s chan bool) {
 func retornaParImpar(r *Nodo, saidaP chan int, saidaI chan int, fin chan struct{}) {
 	if r != nil {
 		preencheSaida(r, saidaP, saidaI)
-	} 
+	}
 	fin <- struct{}{}
 }
 
@@ -131,34 +131,48 @@ func preencheSaida(r *Nodo, saidaP chan int, saidaI chan int) {
 }
 
 // 3.b) a versao concorrente da operação acima, ou seja, os varios nodos sao testados
-//
-//	concorrentemente se pares ou impares, escrevendo o valor no canal adequado
+// concorrentemente se pares ou impares, escrevendo o valor no canal adequado
 func retornaParImparConc(r *Nodo, saidaP chan int, saidaI chan int, fin chan struct{}) {
-	s := make(chan int)
-	retornaParImparConcCh(r, saidaP, saidaI, fin, s)
-}
+	terminou := make(chan bool)
 
-func retornaParImparConcCh(r *Nodo, saidaP chan int, saidaI chan int, fin chan struct{}, s chan int) {
-	if r != nil {
-		preencheSaidaConc(r, saidaP, saidaI)
-	} 
+	go func() {
+		preencheSaidaConc(r, saidaP, saidaI, terminou)
+		// Após a conclusão, sinal para indicar que terminou
+		terminou <- true
+	}()
+
+	// Aguarda o sinal de conclusão
+	<-terminou
 	fin <- struct{}{}
 }
 
-func preencheSaidaConc(r *Nodo, saidaP chan int, saidaI chan int) { //fazer ele esperar percorrer tudo antes de acabar
+func preencheSaidaConc(r *Nodo, saidaP chan int, saidaI chan int, terminou chan bool) {
 	if r != nil {
-		go preencheSaidaConc(r.e, saidaP, saidaI)
+		terminouE := make(chan bool)
+		terminouD := make(chan bool)
+
+		go func() {
+			preencheSaidaConc(r.e, saidaP, saidaI, terminouE)
+			terminouE <- true
+		}()
+
+		go func() {
+			preencheSaidaConc(r.d, saidaP, saidaI, terminouD)
+			terminouD <- true
+		}()
+
 		if r.v%2 == 0 {
 			saidaP <- r.v
 		} else {
 			saidaI <- r.v
 		}
-		go preencheSaidaConc(r.d, saidaP, saidaI)
-	}
-	if r == nil {
-		return
-	}
 
+		// Aguarda os sinais de conclusão das threads filhas
+		<-terminouE
+		<-terminouD
+	}
+	// Sinal para indicar que terminou
+	terminou <- true
 }
 
 func main() {
@@ -179,48 +193,40 @@ func main() {
 				d: &Nodo{v: 19, e: nil, d: nil}}}} // direita de 18
 
 	fmt.Println()
-    fmt.Print("Valores na árvore: ")
-    caminhaERD(root)
-    fmt.Println()
-    fmt.Println()
+	fmt.Print("Valores na árvore: ")
+	caminhaERD(root)
+	fmt.Println()
+	fmt.Println()
 
-    // fmt.Println("Soma: ", soma(root))
-    // fmt.Println("SomaConc: ", somaConc(root))
-    // fmt.Println()
-    // fmt.Println()
+	fmt.Println("Soma: ", soma(root))
+	fmt.Println("SomaConc: ", somaConc(root))
+	fmt.Println()
+	fmt.Println()
 
+	fmt.Println("Busca: ", busca(root, 13))
+	fmt.Println("Busca: ", busca(root, 10))
+	fmt.Println("Busca: ", busca(root, 20))
+	fmt.Println("Busca: ", busca(root, 0))
+	fmt.Println()
+	fmt.Println()
 
-    // fmt.Println("Busca: ", busca(root, 13))
-    // fmt.Println("Busca: ", busca(root, 10))
-    // fmt.Println("Busca: ", busca(root, 20))
-    // fmt.Println("Busca: ", busca(root, 0))
-    // fmt.Println()
-    // fmt.Println()
+	fmt.Println("BuscaConc: ", buscaConc(root, 13))
+	fmt.Println("BuscaConc: ", buscaConc(root, 10))
+	fmt.Println("BuscaConc: ", buscaConc(root, 20))
+	fmt.Println("BuscaConc: ", buscaConc(root, 0))
+	fmt.Println()
+	fmt.Println()
 
-    // fmt.Println("BuscaConc: ", buscaConc(root, 13))
-    // fmt.Println("BuscaConc: ", buscaConc(root, 10))
-    // fmt.Println("BuscaConc: ", buscaConc(root, 20))
-    // fmt.Println("BuscaConc: ", buscaConc(root, 0))
-    // fmt.Println()
-    // fmt.Println()
-
+	fmt.Println("Retorna Par e Impar: ")
 	saidaP := make(chan int)
 	saidaI := make(chan int)
 	fin := make(chan struct{})
-	// go retornaParImpar(root, saidaP, saidaI, fin)
-	// for {
-	// 	select {
-	// 	case p := <-saidaP:
-	// 		fmt.Println("Par: ", p)
-	// 	case i := <-saidaI:
-	// 		fmt.Println("Impar: ", i)
-	// 	case <-fin:
-	// 		fmt.Println("Fim")
-    //         return
-	// 	}
-	// }
-
-	go retornaParImparConc(root, saidaP, saidaI, fin)
+	go retornaParImpar(root, saidaP, saidaI, fin)
+	//go retornaParImparConc(root, saidaP, saidaI, fin)
+	/*
+		caso queira testar o concorrente, basta comentar o
+		anterior e descomentar o concorrente.
+	*/
 	for {
 		select {
 		case p := <-saidaP:
