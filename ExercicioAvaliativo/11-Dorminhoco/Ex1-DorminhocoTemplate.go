@@ -38,8 +38,11 @@ func jogador(id int, in chan carta, out chan carta, cartasIniciais []carta, inic
 	for {
 		if (len(bateu) != 0 && !bateuAntes) { //se alguém bateu e não possui o id dentro do canal
 			fmt.Printf("Jogador %d bateu também!\n", id)
+			if(len(bateu) == NJ - 1) { //se todos bateram, o último leva a rolhada
+				fmt.Printf("Jogador %d foi o último a bater e perdeu o jogo. Portanto, rolhada nele!!!\n", id)
+			}
 			bateu <- id
-			return		
+			return
 		}
 
 		if bateuAntes {
@@ -157,5 +160,4 @@ func main() {
 	for i:=0 ; i < NJ; i++ {
 		<-proximaRodada
 	}
-	fmt.Println("Fim de jogo")
 }
