@@ -16,51 +16,79 @@ import (
 	"time"
 )
 
-const NJ = 5 // numero de jogadores
-const M = 4  // numero de cartas
+const NJ = 5 // número de jogadores
+const M = 4  // número de cartas
 
-type carta string // carta é um strirng
+type carta string // carta é uma string
 
 var ch [NJ]chan carta // NJ canais de itens tipo carta
-
 var bateu chan int
+var proximaRodada chan bool // Canal para sinalizar o início de uma nova rodada
 
-func jogador(id int, in chan carta, out chan carta, cartasIniciais []carta) {
-	mao := cartasIniciais // estado local - as cartas na mao do jogador
+func jogador(id int, in chan carta, out chan carta, cartasIniciais []carta, inicioJogo chan bool) {
+	mao := cartasIniciais // estado local - as cartas na mão do jogador
 	nroDeCartas := M      // quantas cartas ele tem
 	cartaRecebida := carta("")
-	fmt.Printf("Jogador %d cartas na mao: %v\n", id, mao)
+	fmt.Printf("Jogador %d cartas na mão: %v\n", id, mao)
 
+	<-inicioJogo // Aguarda o sinal para começar o jogo
+
+	bateuAntes := false
 
 	for {
+		if (len(bateu) != 0) {
+			fmt.Printf("Jogador %d bateu também!\n", id)
+			bateu <- id
+			return		
+		}
+
+		if bateuAntes {
+			time.Sleep(time.Millisecond * 100) // Aguarda um curto período antes de verificar novamente
+			continue
+		}
+
 		if nroDeCartas == 5 {
 			fmt.Println(id, " joga") // escreve seu identificador
 			// escolhe alguma carta para passar adiante...
 			indiceAleatorio := rand.Intn(nroDeCartas)
 			cartaParaSair := mao[indiceAleatorio]
+			
+			if possuiQuatroLetrasIguais(mao) { // se possui 4 iguais passa a quinta diferente para o próximo
+				cartaParaSair = cartaDiferente(mao)
+			} 
+
 			fmt.Printf("Jogador %d escolheu a carta %s\n", id, cartaParaSair)
 
-			// manda carta escolhida o proximo
+			// manda carta escolhida para o próximo jogador
 			out <- cartaParaSair
 			mao = append(mao[:indiceAleatorio], mao[indiceAleatorio+1:]...)
 			fmt.Printf("Minha nova mão: %v\n", mao)
 			nroDeCartas--
-		} else {
-			cartaRecebida = <-in //ERRO AQUI
-			fmt.Printf("Jogador %d recebeu a carta %s\n", id, cartaRecebida)
-			mao = append(mao, cartaRecebida)
-			nroDeCartas++
 
-			// Verifica se um jogador possui 4 cartas da mesma letra e bate
-			if possuiQuatroLetrasIguais(mao) {
-				fmt.Printf("Jogador %d bate! %v\n", id, mao)
+			if possuiQuatroLetrasIguais(mao) && nroDeCartas == 4 {
+				fmt.Printf("Jogador %d bate!\n", id)
+				bateuAntes = true
 				bateu <- id
-				return;
-			} else {
-				fmt.Printf("Jogador %d nao bate: %v\n", id, mao)
-				//out <- cartaRecebida
+				proximaRodada <- false
 			}
 			
+			// Verifica se todas as cartas foram jogadas
+			if nroDeCartas == 0 {
+				// Sinaliza o início de uma nova rodada
+				proximaRodada <- true
+			}
+			time.Sleep(time.Millisecond * 100)
+		} else {
+			select {
+			case cartaRecebida = <-in:
+				fmt.Printf("Jogador %d recebeu a carta %s\n", id, cartaRecebida)
+				mao = append(mao, cartaRecebida)
+				nroDeCartas++
+				fmt.Printf("Minha nova mão: %v\n", mao)
+				//time.Sleep(time.Millisecond * 100)
+			default:
+				// Não fazer nada, aguarda carta ser recebida
+			}
 		}
 	}
 }
@@ -76,12 +104,33 @@ func possuiQuatroLetrasIguais(mao []carta) bool {
 	return false
 }
 
+func cartaDiferente(mao []carta) carta {
+	contagem := make(map[carta]int)
+	for _, c := range mao {
+		contagem[c]++
+	}
+
+	// Percorre as cartas na mão
+	for _, c := range mao {
+		// Se a contagem da carta for igual a 1, significa que é a carta diferente
+		if contagem[c] == 1 {
+			return c
+		}
+	}
+
+	// Se todas as cartas forem iguais, retorna uma carta vazia ou um valor de erro, dependendo do seu caso de uso
+	return ""
+}
+
 func main() {
 	rand.Seed(time.Now().UnixNano())
-
+	bateu = make(chan int, 5)
 	for i := 0; i < NJ; i++ {
 		ch[i] = make(chan carta)
 	}
+
+	inicioJogo := make(chan bool)    // Canal para sinalizar o início do jogo
+	proximaRodada := make(chan bool) // Canal para sinalizar o início de uma nova rodada
 
 	for i := 0; i < NJ; i++ {
 		cartasEscolhidas := make([]carta, 4)
@@ -89,22 +138,21 @@ func main() {
 			indiceAleatorio := rand.Intn(4) // Gera aleatoriamente um índice entre 0 e 3
 			cartasEscolhidas[j] = carta('A' + indiceAleatorio)
 		}
-		go jogador(i, ch[i], ch[(i+1)%NJ], cartasEscolhidas)
+		go jogador(i, ch[i], ch[(i+1)%NJ], cartasEscolhidas, inicioJogo)
 		time.Sleep(time.Millisecond * 100)
 	}
 	fmt.Println()
 
 	time.Sleep(time.Millisecond * 100)
 
+	// Inicie o jogo sinalizando para os jogadores que podem começar
+	for i := 0; i < NJ; i++ {
+		inicioJogo <- true
+	}
+
 	// Comece o jogo passando uma carta inicial
 	cartaInicial := carta("@")
 	ch[0] <- cartaInicial
 
-	// Aguarde todos os jogadores terminarem
-	for i := 0; i < NJ; i++ {
-		<-ch[i]
-	}
-
-	fmt.Println("O jogo terminou!")
-	<-make(chan carta) // bloqueia
+	<-proximaRodada
 }
