@@ -36,7 +36,7 @@ func jogador(id int, in chan carta, out chan carta, cartasIniciais []carta, inic
 	bateuAntes := false
 
 	for {
-		if (len(bateu) != 0) {
+		if (len(bateu) != 0 && !bateuAntes) { //se alguém bateu e não possui o id dentro do canal
 			fmt.Printf("Jogador %d bateu também!\n", id)
 			bateu <- id
 			return		
@@ -62,7 +62,7 @@ func jogador(id int, in chan carta, out chan carta, cartasIniciais []carta, inic
 			// manda carta escolhida para o próximo jogador
 			out <- cartaParaSair
 			mao = append(mao[:indiceAleatorio], mao[indiceAleatorio+1:]...)
-			fmt.Printf("Minha nova mão: %v\n", mao)
+			fmt.Printf("Minha nova mão (%d): %v\n", id, mao)
 			nroDeCartas--
 
 			if possuiQuatroLetrasIguais(mao) && nroDeCartas == 4 {
@@ -84,7 +84,7 @@ func jogador(id int, in chan carta, out chan carta, cartasIniciais []carta, inic
 				fmt.Printf("Jogador %d recebeu a carta %s\n", id, cartaRecebida)
 				mao = append(mao, cartaRecebida)
 				nroDeCartas++
-				fmt.Printf("Minha nova mão: %v\n", mao)
+				fmt.Printf("Minha nova mão (%d): %v\n", id, mao)
 				//time.Sleep(time.Millisecond * 100)
 			default:
 				// Não fazer nada, aguarda carta ser recebida
@@ -130,7 +130,7 @@ func main() {
 	}
 
 	inicioJogo := make(chan bool)    // Canal para sinalizar o início do jogo
-	proximaRodada := make(chan bool) // Canal para sinalizar o início de uma nova rodada
+	proximaRodada = make(chan bool) // Canal para sinalizar o início de uma nova rodada
 
 	for i := 0; i < NJ; i++ {
 		cartasEscolhidas := make([]carta, 4)
@@ -154,5 +154,8 @@ func main() {
 	cartaInicial := carta("@")
 	ch[0] <- cartaInicial
 
-	<-proximaRodada
+	for i:=0 ; i < NJ; i++ {
+		<-proximaRodada
+	}
+	fmt.Println("Fim de jogo")
 }
