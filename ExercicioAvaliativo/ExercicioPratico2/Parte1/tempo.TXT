@@ -1,0 +1,53 @@
+TEMPO CONCORRENTE POR PROCESSADOR:
+
+1 processador
+
+3 dígitos:  0s
+6 dígitos:  518.7µs
+9 dígitos:  1.0307ms
+13 dígitos:  64.4429ms
+16 dígitos:  2.5512731s
+18 dígitos:  28.8966661s
+
+2 processadores
+
+3 dígitos:  510µs
+6 dígitos:  515.2µs
+9 dígitos:  518µs
+13 dígitos:  33.1625ms
+16 dígitos:  1.2804644s
+18 dígitos:  14.3202414s
+
+4 processadores
+
+3 dígitos:  527.7µs
+6 dígitos:  521µs
+9 dígitos:  519.9µs
+13 dígitos:  21.5201ms
+16 dígitos:  698.563ms
+18 dígitos:  7.3897492s
+
+8 processadores
+
+3 dígitos:  515.7µs
+6 dígitos:  516µs
+9 dígitos:  524.2µs
+13 dígitos:  13.0035ms
+16 dígitos:  446.1455ms
+18 dígitos:  4.5531123s
+
+16 processadores
+
+3 dígitos:  548.5µs
+6 dígitos:  517.3µs
+9 dígitos:  515.6µs
+13 dígitos:  17.3877ms
+16 dígitos:  432.77ms
+18 dígitos:  4.5989172s
+
+
+
+
+
+
+
